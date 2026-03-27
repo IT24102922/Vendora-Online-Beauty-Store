@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard - Beauty Store</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f4f4; padding: 20px; }
+        .container { max-width: 1200px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h2 { color: #be185d; text-align: center; border-bottom: 2px solid #fce7f3; padding-bottom: 10px; margin-top: 30px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; }
+        th, td { border: 1px solid #eee; padding: 12px; text-align: left; }
+        th { background: #be185d; color: white; text-transform: uppercase; font-size: 13px; }
+
+        /* Status Badges */
+        .status-badge { padding: 5px 10px; border-radius: 5px; font-weight: bold; font-size: 11px; text-transform: uppercase; }
+        .pending { background: #fef3c7; color: #92400e; }
+        .shipped { background: #dbeafe; color: #1e40af; }
+        .delivered { background: #dcfce7; color: #166534; }
+        .paid { background: #dcfce7; color: #166534; font-weight: bold; }
+        .cancelled { background: #fee2e2; color: #991b1b; }
+
+        /* Buttons */
+        button { cursor: pointer; border: none; padding: 7px 12px; border-radius: 5px; font-weight: bold; color: white; transition: 0.3s; }
+        .btn-status { background: #be185d; }
+        .btn-pay { background: #059669; }
+        .btn-del { background: #ef4444; }
+        button:hover { opacity: 0.8; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>📦 Order Management</h2>
+    <table>
+        <thead>
+        <tr>
+            <th>Order ID</th>
+            <th>Customer Name</th>
+            <th>Product</th>
+            <th>Current Status</th>
+            <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody id="orderTableBody"></tbody>
+    </table>
+
+    <hr style="margin-top: 50px; border: 1px solid #fce7f3;">
+
+    <h2>💳 Payment Confirmations</h2>
+    <table>
+        <thead>
+        <tr>
+            <th>Order ID</th>
+            <th>Total Amount</th>
+            <th>Payment Method</th>
+            <th>Payment Status</th>
+            <th>Action</th>
+        </tr>
+        </thead>
+        <tbody id="paymentTableBody"></tbody>
+    </table>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        loadOrders();
+        loadPayments();
+    });
+
+    // 1. Load Orders
+    async function loadOrders() {
+        try {
+            const res = await fetch('http://localhost:8080/api/orders');
+            const orders = await res.json();
+            const body = document.getElementById('orderTableBody');
+            body.innerHTML = "";
+
+            orders.forEach(order => {
+                const status = order.status || 'Pending';
+                body.innerHTML += `
+                    <tr>
+                        <td>#${order.id}</td>
+                        <td>${order.firstName || ''} ${order.lastName || ''}</td>
+                        <td>${order.product}</td>
+                        <td><span class="status-badge ${status.toLowerCase()}">${status}</span></td>
+                        <td>
+                            <button class="btn-status" onclick="updateStatus(${order.id})">Update Status</button>
+                            <button class="btn-del" onclick="deleteOrder(${order.id})">Delete Order</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        } catch (error) {
+            console.error("Error loading orders:", error);
+        }
+    }
+
+    // 2. Load Payments - මෙතන තමයි වැරදි තිබුණේ
+    async function loadPayments() {
+        try {
+            const res = await fetch('http://localhost:8080/api/orders');
+            const payments = await res.json();
+            const body = document.getElementById('paymentTableBody');
+            body.innerHTML = "";
+
+            payments.forEach(pay => {
+                // වැදගත්: 'paymentStatus' සහ 'id' පාවිච්චි කරන්න
+                const pStatus = pay.paymentStatus || 'PENDING';
+
+                body.innerHTML += `
+                <tr>
+                    <td>#${pay.id}</td>
+                    <td>$${pay.amount ? pay.amount.toFixed(2) : '0.00'}</td>
+                    <td><strong>${pay.paymentMethod || 'N/A'}</strong></td>
+                    <td><span class="status-badge ${pStatus.toLowerCase()}">${pStatus}</span></td>
+                    <td>
+                        ${pStatus === 'PENDING' ?
+                    `<button class="btn-pay" onclick="confirmPayment(${pay.id})">Confirm Receipt</button>` :
+                    '<span style="color: #059669; font-weight: bold;">✅ Verified</span>'}
+                    </td>
+                </tr>
+            `;
+            });
+        } catch (error) {
+            console.error("Error loading payments:", error);
+        }
+    }
+
+    // 3. Update Status
+    async function updateStatus(id) {
+        const s = prompt("New Status (Shipped / Delivered / Pending):");
+        if(s) {
+            await fetch(`http://localhost:8080/api/orders/${id}/status`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(s)
+            });
+            loadOrders();
+        }
+    }
+
+    // 4. Confirm Payment
+    async function confirmPayment(id) {
+        if(confirm("Are you sure you want to confirm that the payment has been received for Order #" + id + "?")) {
+            try {
+                const response = await fetch(`http://localhost:8080/api/orders/${id}/pay-confirm`, {
+                    method: 'PUT'
+                });
+
+                if (response.ok) {
+                    alert("Payment Verified Successfully!");
+                    loadOrders(); // පේජ් දෙකම රිප්‍රෙෂ් කරනවා
+                    loadPayments();
+                }
+            } catch (error) {
+                console.error("Error connecting to server:", error);
+            }
+        }
+    }
+
+    // 5. Delete Order
+    async function deleteOrder(id) {
+        if(confirm("Are you sure you want to delete this order?")) {
+            await fetch(`http://localhost:8080/api/orders/${id}`, { method: 'DELETE' });
+            loadOrders();
+            loadPayments();
+        }
+    }
+</script>
+</body>
+</html>
