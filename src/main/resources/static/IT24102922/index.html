@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout - Online Beauty Store</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        :root { --primary: #be185d; --bg: #fff5f8; --text: #4a044e; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        .checkout-container { max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: 1.5fr 1fr; gap: 30px; }
+        .card { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 10px 25px rgba(190, 24, 93, 0.1); margin-bottom: 20px; }
+        h2, h3 { color: var(--primary); margin-top: 0; }
+        .input-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
+        .btn-primary { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        .btn-primary:hover { background: #9d174d; transform: translateY(-2px); }
+        .shipping-option { border: 2px solid #eee; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; cursor: pointer; }
+        .shipping-option.active { border-color: var(--primary); background: #fdf2f8; }
+        .summary-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 1.2rem; border-top: 2px solid #eee; padding-top: 15px; color: var(--primary); }
+        .cancel-btn { background: #ef4444; color: white; padding: 10px; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+
+<div id="main-content" class="checkout-container">
+    <div class="left-panel">
+        <h2>Checkout</h2>
+
+
+
+        <div id="step-1" class="card">
+            <h3>📍 Shipping Information</h3>
+            <div class="input-group">
+                <input type="text" id="firstName" placeholder="First Name *">
+                <input type="text" id="lastName" placeholder="Last Name *">
+            </div>
+            <input type="email" id="email" placeholder="Email Address *" style="margin-bottom: 15px;">
+            <input type="text" id="phone" placeholder="Phone Number *" style="margin-bottom: 15px;">
+            <input type="text" id="address" placeholder="Street Address *" style="margin-bottom: 15px;">
+            <div class="input-group">
+                <input type="text" id="city" placeholder="City *">
+                <input type="text" id="zipCode" placeholder="ZIP Code *">
+            </div>
+
+            <h3>🚚 Shipping Method</h3>
+            <div class="shipping-option active" onclick="selectShipping(5.99, 'Standard', this)">
+                <span>Standard Shipping</span>
+                <strong>$5.99</strong>
+            </div>
+            <div class="shipping-option" onclick="selectShipping(15.99, 'Express', this)">
+                <span>Express Shipping</span>
+                <strong>$15.99</strong>
+            </div>
+            <button class="btn-primary" onclick="goToStep(2)">Continue to Payment</button>
+        </div>
+
+        <div id="step-2" class="card" style="display:none;">
+            <h3>💳 Payment Method</h3>
+            <div style="margin-bottom: 20px;">
+                <label><input type="radio" name="payType" value="Online" checked onchange="togglePayView('Online')"> Online Payment (Card)</label><br><br>
+                <label><input type="radio" name="payType" value="COD" onchange="togglePayView('COD')"> Cash on Delivery (COD)</label>
+            </div>
+
+            <div id="card-fields">
+                <input type="text" id="cardNum" placeholder="Card Number (16 digits)" maxlength="16" autocomplete="off" style="margin-bottom: 10px;">
+                <div class="input-group">
+                    <input type="text" id="expDate" placeholder="MM / YY" maxlength="5" autocomplete="off">
+                    <input type="text" id="cvvCode" placeholder="CVV" maxlength="3" autocomplete="off">
+                </div>
+            </div>
+
+            <button class="btn-primary" onclick="handlePlaceOrder()">Place Order</button>
+            <button style="background:none; border:none; color:var(--primary); cursor:pointer; width:100%; margin-top:10px;" onclick="goToStep(1)">← Back</button>
+        </div>
+    </div>
+    <div class="right-panel">
+        <button onclick="window.location.href='order_history.html'"
+                style="background: #be185d; color: white; padding: 15px; border: none; border-radius: 12px; width: 100%; font-weight: bold; cursor: pointer; transition: 0.3s; margin-bottom: 20px; font-size: 16px; box-shadow: 0 5px 15px rgba(190, 24, 93, 0.2);">
+            🛍️ View My Orders
+        </button>
+
+        <div class="card">
+            <h3>Order Summary</h3>
+            <div class="summary-row"><span>Subtotal</span><span>$45.00</span></div>
+            <div class="summary-row"><span>Shipping</span><span id="display-shipping">$5.99</span></div>
+            <div class="total-row"><span>Total</span><span id="display-total">$50.99</span></div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    let shippingCost = 5.99;
+    let shippingMethod = "Standard";
+
+    function selectShipping(cost, method, el) {
+        shippingCost = cost;
+        shippingMethod = method;
+        document.getElementById('display-shipping').innerText = `$${cost.toFixed(2)}`;
+        document.getElementById('display-total').innerText = `$${(45.00 + cost).toFixed(2)}`;
+        document.querySelectorAll('.shipping-option').forEach(opt => opt.classList.remove('active'));
+        el.classList.add('active');
+    }
+
+    function goToStep(step) {
+        if (step === 2) {
+            const fName = document.getElementById('firstName').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const addr = document.getElementById('address').value.trim();
+
+            if (!fName || !email || !addr) {
+                alert("Please fill in all shipping details.");
+                return;
+            }
+        }
+        document.getElementById('step-1').style.display = step === 1 ? 'block' : 'none';
+        document.getElementById('step-2').style.display = step === 2 ? 'block' : 'none';
+    }
+
+    function togglePayView(type) {
+        document.getElementById('card-fields').style.display = type === 'Online' ? 'block' : 'none';
+    }
+
+    async function handlePlaceOrder() {
+        const payType = document.querySelector('input[name="payType"]:checked').value;
+
+        // --- 1. Payment Validation ---
+        if (payType === 'Online') {
+            const cardNum = document.getElementById('cardNum').value.trim();
+            const expDate = document.getElementById('expDate').value.trim();
+            const cvv = document.getElementById('cvvCode').value.trim();
+
+            if (cardNum.length !== 16 || isNaN(cardNum)) {
+                alert("Invalid card number. Please enter 16 digits.");
+                return;
+            }
+            if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expDate)) {
+                alert("Invalid expiry date.(MM/YY).");
+                return;
+            }
+            if (cvv.length !== 3 || isNaN(cvv)) {
+                alert("Invalid CVV.");
+                return;
+            }
+        }
+        const orderData = {
+            firstName: document.getElementById('firstName').value,
+            lastName: document.getElementById('lastName').value,
+            email: document.getElementById('email').value,
+            phone: document.getElementById('phone').value,
+            address: document.getElementById('address').value,
+            city: document.getElementById('city').value,
+            zipCode: document.getElementById('zipCode').value,
+            product: "Sunset Eyes Palette",
+            amount: parseFloat(document.getElementById('display-total').innerText.replace('$', '')),
+            shippingMethod: shippingMethod,
+            paymentMethod: payType
+        };
+
+        try {
+
+            const orderRes = await fetch('http://localhost:8080/api/orders/add', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(orderData)
+            });
+
+            if (orderRes.ok) {
+                const savedOrder = await orderRes.json();
+
+
+                const paymentData = {
+                    orderId: savedOrder.id,
+                    amount: orderData.amount,
+                    paymentMethod: payType,
+                    status: (payType === 'Online' ? 'SUCCESS' : 'PENDING')
+                };
+
+                const payRes = await fetch('http://localhost:8080/api/payments/process', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(paymentData)
+                });
+
+                if (payRes.ok) {
+                    showSuccessPage(orderData);
+                } else {
+                    alert("Order saved successfully.\n" +
+                        "However, there was an issue processing your payment.");
+                }
+            }
+        } catch (e) {
+            console.error(error);
+            alert("Error: Spring Boot application is not running.\n" +
+                "Please start the server and try again..");
+        }
+    }
+
+    async function cancelOrder(orderId) {
+        if (confirm("Are you sure you want to cancel this order?")) {
+            try {
+                const res = await fetch(`http://localhost:8080/api/orders/${orderId}/cancel`, {
+                    method: 'PUT'
+                });
+
+                if (res.ok) {
+                    alert("Order cancelled successfully!");
+                    location.reload();
+                } else {
+                    const errorMsg = await res.text();
+                    alert("Fail: " + errorMsg);
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                alert("Server connection error!");
+            }
+        }
+    }
+
+    function showSuccessPage(data) {
+        document.body.innerHTML = `
+        <div id="invoice" style="max-width: 600px; margin: 50px auto; padding: 30px; background: white; border-radius: 15px; box-shadow: 0 0 20px rgba(0,0,0,0.1); font-family: sans-serif;">
+            <div style="text-align: center; color: #be185d;">
+                <h1>🎉 Order Successful!</h1>
+                <p>Thank you, ${data.firstName}!</p>
+            </div>
+            <hr style="border: 1px solid #eee; margin: 20px 0;">
+            <h3>Order Details:</h3>
+            <p><strong>Product:</strong> ${data.product}</p>
+            <p><strong>Address:</strong> ${data.address}, ${data.city}</p>
+            <p><strong>Payment:</strong> ${data.paymentMethod}</p>
+            <h2 style="color: #be185d;">Total Amount: $${data.amount.toFixed(2)}</h2>
+            <div id="action-buttons" style="margin-top: 30px; display: flex; gap: 10px;">
+                <button onclick="downloadPDF()" style="background: #be185d; color: white; border: none; padding: 12px; border-radius: 8px; flex: 1; cursor: pointer;">Download Receipt</button>
+                <button onclick="window.location.reload()" style="background: #eee; padding: 12px; border-radius: 8px; flex: 1; cursor: pointer; border:none;">New Order</button>
+            </div>
+        </div>
+    `;
+    }
+
+    function downloadPDF() {
+        const element = document.getElementById('invoice');
+        const buttons = document.getElementById('action-buttons');
+        buttons.style.display = 'none';
+        html2pdf().from(element).save('Receipt.pdf').then(() => {
+            buttons.style.display = 'flex';
+        });
+    }
+
+
+</script>
+</body>
+</html>

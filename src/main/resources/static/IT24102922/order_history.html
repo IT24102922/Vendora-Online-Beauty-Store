@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Order History - Online Beauty Store</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #fff5f8; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 25px rgba(0,0,0,0.05); }
+        h2 { color: #be185d; border-bottom: 2px solid #fdf2f8; padding-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #be185d; color: white; border-radius: 5px 5px 0 0; }
+        .status-badge { padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; }
+        .cancel-btn { background: #ef4444; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .cancel-btn:hover { background: #dc2626; }
+        .back-btn { background: #be185d; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-bottom: 20px; text-decoration: none; display: inline-block; }
+    </style>
+</head>
+<body>
+
+<a href="index.html" class="back-btn">← Back to Shopping</a>
+
+<div class="container">
+    <h2>🛍️ My Order History</h2>
+    <table id="ordersTable">
+        <thead>
+        <tr>
+            <th>Order ID</th>
+            <th>Product</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Action</th>
+        </tr>
+        </thead>
+        <tbody id="orderList">
+        </tbody>
+    </table>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', fetchOrders);
+
+    // --- US_4.3: දත්ත ලබාගැනීම ---
+    async function fetchOrders() {
+        try {
+            // සර්වර් එකේ නිවැරදි Port එක සහ URL එක (8080)
+            const res = await fetch('http://localhost:8080/api/orders');
+            if (!res.ok) throw new Error("HTTP error " + res.status);
+
+            const orders = await res.json();
+            const list = document.getElementById('orderList');
+            list.innerHTML = "";
+
+            orders.forEach(order => {
+                const row = `
+                        <tr>
+                            <td>#${order.id}</td>
+                            <td>${order.product}</td>
+                            <td>$${order.amount.toFixed(2)}</td>
+                            <td><span class="status-badge" style="${getStatusStyle(order.status)}">${order.status}</span></td>
+                            <td>
+                                ${order.status.toLowerCase() === 'pending' ?
+                    `<button class="cancel-btn" onclick="cancelOrder(${order.id})">Cancel</button>` : '-'}
+                            </td>
+                        </tr>
+                    `;
+                list.innerHTML += row;
+            });
+        } catch (e) {
+            console.error(e);
+            alert("Error: Please make sure Spring Boot is running!");
+        }
+    }
+
+    function getStatusStyle(status) {
+        if (status === 'Cancelled') return 'background: #fee2e2; color: #ef4444;';
+        if (status === 'PAID' || status === 'Delivered') return 'background: #dcfce7; color: #15803d;';
+        return 'background: #fef9c3; color: #a16207;';
+    }
+
+    // --- US_4.6: ඕඩර් එක Cancel කිරීම ---
+    async function cancelOrder(id) {
+        if (confirm("Are you sure you want to cancel this order?")) {
+            try {
+                const res = await fetch(`http://localhost:8080/api/orders/${id}/cancel`, {
+                    method: 'PUT'
+                });
+
+                if (res.ok) {
+                    alert("Order Cancelled Successfully!");
+                    fetchOrders(); // ටේබල් එක අලුත් කිරීම
+                } else {
+                    const msg = await res.text();
+                    alert("Fail: " + msg);
+                }
+            } catch (e) { alert("Server connection error!"); }
+        }
+    }
+</script>
+</body>
+</html>
