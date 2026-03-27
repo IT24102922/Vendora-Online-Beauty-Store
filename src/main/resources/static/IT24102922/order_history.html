@@ -40,10 +40,10 @@
 <script>
     document.addEventListener('DOMContentLoaded', fetchOrders);
 
-    // --- US_4.3: දත්ත ලබාගැනීම ---
+
     async function fetchOrders() {
         try {
-            // සර්වර් එකේ නිවැරදි Port එක සහ URL එක (8080)
+
             const res = await fetch('http://localhost:8080/api/orders');
             if (!res.ok) throw new Error("HTTP error " + res.status);
 
@@ -56,7 +56,7 @@
                         <tr>
                             <td>#${order.id}</td>
                             <td>${order.product}</td>
-                            <td>$${order.amount.toFixed(2)}</td>
+                            <td>Rs.${order.amount.toFixed(2)}</td>
                             <td><span class="status-badge" style="${getStatusStyle(order.status)}">${order.status}</span></td>
                             <td>
                                 ${order.status.toLowerCase() === 'pending' ?
@@ -78,7 +78,7 @@
         return 'background: #fef9c3; color: #a16207;';
     }
 
-    // --- US_4.6: ඕඩර් එක Cancel කිරීම ---
+
     async function cancelOrder(id) {
         if (confirm("Are you sure you want to cancel this order?")) {
             try {
@@ -88,7 +88,7 @@
 
                 if (res.ok) {
                     alert("Order Cancelled Successfully!");
-                    fetchOrders(); // ටේබල් එක අලුත් කිරීම
+                    fetchOrders();
                 } else {
                     const msg = await res.text();
                     alert("Fail: " + msg);

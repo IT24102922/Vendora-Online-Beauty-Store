@@ -30,8 +30,6 @@
     <div class="left-panel">
         <h2>Checkout</h2>
 
-
-
         <div id="step-1" class="card">
             <h3>📍 Shipping Information</h3>
             <div class="input-group">
@@ -47,13 +45,13 @@
             </div>
 
             <h3>🚚 Shipping Method</h3>
-            <div class="shipping-option active" onclick="selectShipping(5.99, 'Standard', this)">
+            <div class="shipping-option active" onclick="selectShipping(500.00, 'Standard', this)">
                 <span>Standard Shipping</span>
-                <strong>$5.99</strong>
+                <strong>Rs. 500</strong>
             </div>
-            <div class="shipping-option" onclick="selectShipping(15.99, 'Express', this)">
+            <div class="shipping-option" onclick="selectShipping(1200.00, 'Express', this)">
                 <span>Express Shipping</span>
-                <strong>$15.99</strong>
+                <strong>Rs. 1200</strong>
             </div>
             <button class="btn-primary" onclick="goToStep(2)">Continue to Payment</button>
         </div>
@@ -85,23 +83,24 @@
 
         <div class="card">
             <h3>Order Summary</h3>
-            <div class="summary-row"><span>Subtotal</span><span>$45.00</span></div>
-            <div class="summary-row"><span>Shipping</span><span id="display-shipping">$5.99</span></div>
-            <div class="total-row"><span>Total</span><span id="display-total">$50.99</span></div>
+            <div class="summary-row"><span>Subtotal</span><span>Rs. 4500.00</span></div>
+            <div class="summary-row"><span>Shipping</span><span id="display-shipping">Rs. 500.00</span></div>
+            <div class="total-row"><span>Total</span><span id="display-total">Rs. 5000.00</span></div>
         </div>
     </div>
 </div>
 
 
 <script>
-    let shippingCost = 5.99;
+    let subtotal = 4500.00;
+    let shippingCost = 500.00;
     let shippingMethod = "Standard";
 
     function selectShipping(cost, method, el) {
         shippingCost = cost;
         shippingMethod = method;
-        document.getElementById('display-shipping').innerText = `$${cost.toFixed(2)}`;
-        document.getElementById('display-total').innerText = `$${(45.00 + cost).toFixed(2)}`;
+        document.getElementById('display-shipping').innerText = `Rs. ${cost.toFixed(2)}`;
+        document.getElementById('display-total').innerText = `Rs. ${(subtotal + cost).toFixed(2)}`;
         document.querySelectorAll('.shipping-option').forEach(opt => opt.classList.remove('active'));
         el.classList.add('active');
     }
@@ -128,7 +127,6 @@
     async function handlePlaceOrder() {
         const payType = document.querySelector('input[name="payType"]:checked').value;
 
-        // --- 1. Payment Validation ---
         if (payType === 'Online') {
             const cardNum = document.getElementById('cardNum').value.trim();
             const expDate = document.getElementById('expDate').value.trim();
@@ -147,6 +145,11 @@
                 return;
             }
         }
+
+
+        const totalText = document.getElementById('display-total').innerText;
+        const amountValue = parseFloat(totalText.replace('Rs. ', ''));
+
         const orderData = {
             firstName: document.getElementById('firstName').value,
             lastName: document.getElementById('lastName').value,
@@ -156,13 +159,12 @@
             city: document.getElementById('city').value,
             zipCode: document.getElementById('zipCode').value,
             product: "Sunset Eyes Palette",
-            amount: parseFloat(document.getElementById('display-total').innerText.replace('$', '')),
+            amount: amountValue,
             shippingMethod: shippingMethod,
             paymentMethod: payType
         };
 
         try {
-
             const orderRes = await fetch('http://localhost:8080/api/orders/add', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -171,7 +173,6 @@
 
             if (orderRes.ok) {
                 const savedOrder = await orderRes.json();
-
 
                 const paymentData = {
                     orderId: savedOrder.id,
@@ -194,30 +195,8 @@
                 }
             }
         } catch (e) {
-            console.error(error);
-            alert("Error: Spring Boot application is not running.\n" +
-                "Please start the server and try again..");
-        }
-    }
-
-    async function cancelOrder(orderId) {
-        if (confirm("Are you sure you want to cancel this order?")) {
-            try {
-                const res = await fetch(`http://localhost:8080/api/orders/${orderId}/cancel`, {
-                    method: 'PUT'
-                });
-
-                if (res.ok) {
-                    alert("Order cancelled successfully!");
-                    location.reload();
-                } else {
-                    const errorMsg = await res.text();
-                    alert("Fail: " + errorMsg);
-                }
-            } catch (error) {
-                console.error("Error:", error);
-                alert("Server connection error!");
-            }
+            console.error(e);
+            alert("Error: Spring Boot application is not running.");
         }
     }
 
@@ -233,7 +212,7 @@
             <p><strong>Product:</strong> ${data.product}</p>
             <p><strong>Address:</strong> ${data.address}, ${data.city}</p>
             <p><strong>Payment:</strong> ${data.paymentMethod}</p>
-            <h2 style="color: #be185d;">Total Amount: $${data.amount.toFixed(2)}</h2>
+            <h2 style="color: #be185d;">Total Amount: Rs. ${data.amount.toFixed(2)}</h2>
             <div id="action-buttons" style="margin-top: 30px; display: flex; gap: 10px;">
                 <button onclick="downloadPDF()" style="background: #be185d; color: white; border: none; padding: 12px; border-radius: 8px; flex: 1; cursor: pointer;">Download Receipt</button>
                 <button onclick="window.location.reload()" style="background: #eee; padding: 12px; border-radius: 8px; flex: 1; cursor: pointer; border:none;">New Order</button>
@@ -250,8 +229,6 @@
             buttons.style.display = 'flex';
         });
     }
-
-
 </script>
 </body>
 </html>

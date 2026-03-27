@@ -95,7 +95,7 @@
         }
     }
 
-    // 2. Load Payments - මෙතන තමයි වැරදි තිබුණේ
+    // 2. Load Payments
     async function loadPayments() {
         try {
             const res = await fetch('http://localhost:8080/api/orders');
@@ -104,13 +104,12 @@
             body.innerHTML = "";
 
             payments.forEach(pay => {
-                // වැදගත්: 'paymentStatus' සහ 'id' පාවිච්චි කරන්න
                 const pStatus = pay.paymentStatus || 'PENDING';
 
                 body.innerHTML += `
                 <tr>
                     <td>#${pay.id}</td>
-                    <td>$${pay.amount ? pay.amount.toFixed(2) : '0.00'}</td>
+                    <td>Rs. ${pay.amount ? pay.amount.toFixed(2) : '0.00'}</td>
                     <td><strong>${pay.paymentMethod || 'N/A'}</strong></td>
                     <td><span class="status-badge ${pStatus.toLowerCase()}">${pStatus}</span></td>
                     <td>
@@ -128,14 +127,18 @@
 
     // 3. Update Status
     async function updateStatus(id) {
-        const s = prompt("New Status (Shipped / Delivered / Pending):");
+        const s = prompt("New Status (Shipped / Delivered / Pending / Cancelled):");
         if(s) {
-            await fetch(`http://localhost:8080/api/orders/${id}/status`, {
-                method: 'PUT',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(s)
-            });
-            loadOrders();
+            try {
+                await fetch(`http://localhost:8080/api/orders/${id}/status`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(s)
+                });
+                loadOrders();
+            } catch (err) {
+                console.error("Error updating status:", err);
+            }
         }
     }
 
@@ -149,7 +152,7 @@
 
                 if (response.ok) {
                     alert("Payment Verified Successfully!");
-                    loadOrders(); // පේජ් දෙකම රිප්‍රෙෂ් කරනවා
+                    loadOrders();
                     loadPayments();
                 }
             } catch (error) {
@@ -161,9 +164,13 @@
     // 5. Delete Order
     async function deleteOrder(id) {
         if(confirm("Are you sure you want to delete this order?")) {
-            await fetch(`http://localhost:8080/api/orders/${id}`, { method: 'DELETE' });
-            loadOrders();
-            loadPayments();
+            try {
+                await fetch(`http://localhost:8080/api/orders/${id}`, { method: 'DELETE' });
+                loadOrders();
+                loadPayments();
+            } catch (err) {
+                console.error("Error deleting order:", err);
+            }
         }
     }
 </script>
